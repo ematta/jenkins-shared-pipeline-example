@@ -1,0 +1,131 @@
+plugins {
+    id 'groovy'
+    id 'java'
+    id 'idea'
+    id 'jacoco'
+    id "org.sonarqube" version "2.7"
+    id "org.owasp.dependencycheck" version "5.3.2.1"
+}
+
+group 'dev.matta'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+idea {
+    module {
+        downloadJavadoc = true
+        downloadSources = true
+    }
+}
+
+sourceSets {
+    main {
+        groovy {
+            srcDirs = ['vars', 'src']
+        }
+    }
+
+    test {
+        groovy {
+            srcDirs = ['test']
+        }
+    }
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    maven { url 'http://repo.jenkins-ci.org/releases/' }
+    maven { url 'https://jitpack.io' }
+    mavenCentral()
+    jcenter()
+}
+
+
+dependencies {
+    compile "org.codehaus.groovy:groovy-all:2.5.8"
+
+    compile 'org.jenkins-ci.main:jenkins-core:2.85'
+    compile group: 'org.jenkins-ci.plugins', name: 'credentials', version: '2.1.16'
+    compile group: 'org.jenkins-ci.plugins', name: 'credentials-binding', version: '1.13'
+    compile group: 'org.jenkins-ci.plugins', name: 'git', version: '3.6.0'
+    compile group: 'org.jenkins-ci.plugins', name: 'scm-api', version: '2.2.2'
+    compile group: 'org.jenkins-ci.plugins', name: 'ssh-credentials', version: '1.13'
+    compile group: 'org.jenkins-ci.plugins', name: 'docker-commons', version: '1.9'
+
+    testImplementation "org.junit.jupiter:junit-jupiter:5.6.2"
+    testCompile "org.mockito:mockito-core:2.+"
+
+    compile fileTree(dir: 'lib', include: ['*.jar'])
+}
+/*
+sonarqube {
+    properties {
+        property "sonar.sourceEncoding", "UTF-8"
+        property "sonar.projectKey", "${rootProject.name}"
+        property "sonar.host.url", "http://sonar.matta.dev:1080"
+        property "sonar.login", ""
+        property "sonar.junit.reportPaths", "${buildDir}/test-results/test"
+        property "sonar.coverage.jacoco.xmlReportPaths", "${buildDir}/jacoco.xml"
+    }
+}
+*/
+
+jacoco {
+    toolVersion = "0.8.5"
+}
+
+jacocoTestReport {
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: '**/*$*_closure*')
+        }))
+    }
+
+    reports {
+        xml {
+            enabled true
+            destination file("${buildDir}/jacoco.xml")
+        }
+        html {
+            enabled true
+            destination file("${buildDir}/jacocoHtml")
+        }
+    }
+    dependsOn {
+        test
+    }
+}
+
+test {
+    useJUnitPlatform()
+    jacoco {
+        enabled = true
+        excludes = ["test/**/*", '**/*$*_closure*']
+    }
+    finalizedBy {
+        jacocoTestReport
+    }
+}
+
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.00
+            }
+        }
+    }
+}
+
+check {
+    dependsOn {
+        jacocoTestCoverageVerification
+    }
+}
+
+project.tasks["sonarqube"].dependsOn "jacocoTestReport"

@@ -1,0 +1,27 @@
+version: "3.7"
+services:
+  master:
+    container_name: jenkins-master
+    build:
+      context: .
+      dockerfile: Dockerfile
+    privileged: true
+    user: root
+    environment:
+      JAVA_OPTS: -Dhudson.footerURL=https://matta.dev -Djava.util.logging.config.file=/var/jenkins_home/log.properties
+    restart: always
+    ports:
+      - 8080:8080
+      - 50000:50000
+    volumes:
+      - jenkins-master:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - jenkins
+
+volumes:
+  jenkins-master:
+    driver: local
+
+networks:
+  jenkins:
